@@ -1,4 +1,4 @@
-                                        # Spotify Frontend Admin Basic
+#                                       Spotify Frontend Admin Basic
 
 ## Giới thiệu
 Dự án này là frontend admin cơ bản cho Spotify.
