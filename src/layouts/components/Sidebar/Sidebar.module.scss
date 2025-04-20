@@ -12,6 +12,13 @@
     height: 62px;
 }
 
+.logo{
+    font-size: 36px;
+    margin: 6px 0px 20px 0;
+    font-weight: 600;
+    text-align: center;
+}
+
 .categories-shop {
     padding: 0px 21px;
     border-right: 1px solid #eeeeee;
@@ -20,6 +27,7 @@
     left: 0;
     top: 0;
     bottom: 0;
+    width: 18%;
 }
 
 .title-category {
