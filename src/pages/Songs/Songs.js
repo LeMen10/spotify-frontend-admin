@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { TrashIcon } from '~/components/Icons';
+import { TrashIcon, UpdateIcon } from '~/components/Icons';
 import ReactPaginate from 'react-paginate';
 import { useNavigate } from 'react-router-dom';
 import className from 'classnames/bind';
@@ -8,155 +8,179 @@ import styles from './Songs.module.scss';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import * as request from '~/utils/request';
+import axios from 'axios';
 
 const cx = className.bind(styles);
 
 const Songs = () => {
     const navigate = useNavigate();
-    const [users, setUsers] = useState([]);
-    const [checkedItems, setCheckedItems] = useState([]);
     const [checkedDelete, setCheckedDelete] = useState(false);
-    const [productIdDelete, setProductIdDelete] = useState();
-    const [countDelete, setCountDelete] = useState();
+    const [songIdToDelete, setSongIdDelete] = useState();
     const [pageCount, setPageCount] = useState();
-    const [currentPageProduct, setCurrentPageProduct] = useState();
+    const [currentPageSong, setCurrentPageSong] = useState();
 
-    const [checkedBtnEdit, setCheckedBtnEdit] = useState(false);
-    const [checkedBtnAdd, setCheckedBtnAdd] = useState(false);
-    const [userIdEdit, setUserIdEdit] = useState();
+    const [title, setTitle] = useState('');
+    const [selectedArtist, setSelectedArtist] = useState('');
+    const [selectedGenre, setSelectedGenre] = useState('');
+    const [duration, setDuration] = useState('');
+    const [releaseDate, setReleaseDate] = useState('');
+    const [audioFile, setAudioFile] = useState(null);
 
-    const [fullName, setFullName] = useState('');
-    const [username, setUsername] = useState();
-    const [phone, setPhone] = useState();
-    const [email, setEmail] = useState('');
-    const [role, setRole] = useState('');
-    const [city, setCity] = useState('');
-    const [district, setDistrict] = useState('');
-    const [ward, setWard] = useState('');
-    const [specificAddress, setSpecificAddress] = useState('');
+    const [artists, setArtists] = useState([]);
+    const [genres, setGenres] = useState([]);
+    const [songs, setSongs] = useState([]);
 
-    const postsPerPage = 8;
+    const [modalType, setModalType] = useState(null);
+    const [songToEdit, setSongToEdit] = useState(null);
 
-    const handleCheckDelete = (event) => {
-        const targetId = event.target.dataset.id;
-        setCheckedDelete(!checkedDelete);
-        setProductIdDelete(targetId);
-    };
+    const postsPerPage = 10;
 
-    const getUsers = async (currentPage) => {
+    const getSongs = async (currentPage) => {
         try {
-            const res = await request.get(`/Admin/get-users?page=${currentPage}&limit=${postsPerPage}`);
-            setUsers(res.users);
-            setPageCount(res.countUser);
+            const res = await request.get(`/api/admin/get-songs?page=${currentPage}&limit=${postsPerPage}`);
+            
+            setSongs(res.data);
+            setPageCount(res.page_count);
         } catch (error) {
             if (error.response.status === 401) navigate('/login');
         }
     };
 
-
+    useEffect(() => {
+        (async () => {
+            try {
+                const [artistRes, genreRes] = await Promise.all([
+                    request.get('/api/admin/get-artists'),
+                    request.get('/api/admin/get-genres'),
+                ]);
+                setArtists(artistRes);
+                setGenres(genreRes);
+            } catch (err) {
+                console.error(err);
+                navigate('/login');
+            }
+        })();
+    }, [navigate]);
 
     useEffect(() => {
         (async () => {
             try {
-                const res = await request.get(`/Admin/get-count-user-deleted`);
-                setCountDelete(res.count);
+                const res = await request.get(`/api/admin/get-songs`);
+                setSongs(res.data);
+                setPageCount(res.page_count);
+                console.log(res);
             } catch (error) {
                 if (error.response && error.response.status === 401) {
                     navigate('/login');
                 }
             }
         })();
-    }, [users, navigate]);
+    }, [navigate]);
 
-    const handleDeleteUsers = async () => {
+    const handleCheckDelete = (event) => {
+        const targetId = event.currentTarget.dataset.id;
+        setCheckedDelete(!checkedDelete);
+        setSongIdDelete(targetId);
+    };
+
+    const handleDeleteSong = async () => {
         try {
-            await request.delete_method(`/Admin/delete-user/${productIdDelete}`);
+            await request.delete_method(`/api/admin/delete-song/${songIdToDelete}`);
             setCheckedDelete(!checkedDelete);
-            getUsers(currentPageProduct || 1);
+            getSongs(currentPageSong || 1);
         } catch (error) {
-            if (error.response.status === 401) navigate('/login');
+            if (error.response?.status === 401) {
+                navigate('/login');
+            } else {
+                console.error('Lỗi khi xóa bài hát:', error);
+            }
         }
     };
 
-    const handleEditUser = async () => {
+    const handleAddSong = async () => {
+        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate || !audioFile) {
+            alert('Vui lòng điền đầy đủ thông tin!');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('duration', duration);
+        formData.append('release_date', releaseDate);
+        formData.append('artist_id', selectedArtist);
+        formData.append('genre_id', selectedGenre);
+        formData.append('audio_file', audioFile);
+
         try {
-            await request.put(`/Admin/edit-user/${userIdEdit}`, {
-                fullName,
-                username,
-                phone,
-                email,
-                role,
-                city,
-                district,
-                ward,
-                specificAddress,
+            const res = await fetch(`${process.env.REACT_APP_BASE_URL}api/admin/add-song`, {
+                method: 'POST',
+                body: formData,
             });
-            setCheckedBtnEdit(!checkedBtnEdit);
-            getUsers(currentPageProduct || 1);
-            setUsername(undefined);
-            setFullName(undefined);
-            setEmail(undefined);
-            setPhone(undefined);
-            setRole(undefined);
-            setCity(undefined);
-            setDistrict(undefined);
-            setWard(undefined);
-            setSpecificAddress(undefined);
-            setUserIdEdit(undefined);
+
+            if (res.ok) {
+                const rs = await res.json();
+                setSongs((prevSongs) => [...prevSongs, rs]);
+                setTitle('');
+                setSelectedArtist('');
+                setSelectedGenre('');
+                setDuration('');
+                setReleaseDate('');
+                setAudioFile(null);
+                // setCheckedBtnAddSong(false);
+            } else {
+                await res.json();
+            }
         } catch (error) {
-            if (error.response.status === 401) navigate('/login');
+            console.error('Lỗi kết nối:', error);
         }
     };
-
-    const handleDeleteMultipleUser = async () => {
-        var dataIds = checkedItems;
-
-        try {
-            await request.delete_method(`/Admin/delete-multiple-users`, { data: dataIds });
-            setCheckedDelete(!checkedDelete);
-            getUsers(currentPageProduct || 1);
-            setCheckedItems([]);
-        } catch (error) {
-            if (error.response.status === 401) navigate('/login');
-        }
-    };
-
-    const handleCheckedBtnEdit = (event) => {
-        const targetId = event.target.dataset.id;
-        setCheckedBtnEdit(!checkedBtnEdit);
-        setUserIdEdit(targetId);
-    };
-
-    useEffect(() => {
-        if (userIdEdit) {
-            (async () => {
-                try {
-                    const res = await request.get(`/Admin/find-user/${userIdEdit}`);
-                    const user = res.user[0];
-
-                    // Cập nhật các state tương ứng
-                    setUsername(user.username);
-                    setFullName(user.fullName);
-                    setEmail(user.email);
-                    setPhone(user.phone);
-                    setRole(user.role);
-                    setCity(user.city);
-                    setDistrict(user.district);
-                    setWard(user.ward);
-                    setSpecificAddress(user.specificAddress);
-                } catch (error) {
-                    if (error.response && error.response.status === 401) {
-                        navigate('/login');
-                    }
-                }
-            })();
-        }
-    }, [userIdEdit, navigate]);
 
     const handlePageClick = (event) => {
         let currentPage = event.selected + 1;
-        getUsers(currentPage);
-        setCurrentPageProduct(currentPage);
+        getSongs(currentPage);
+        setCurrentPageSong(currentPage);
+    };
+
+    const handleUpdateSong = async () => {
+        console.log(title, selectedArtist, selectedGenre, duration, releaseDate, audioFile);
+        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate) {
+            return;
+        }
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('duration', duration);
+        formData.append('release_date', releaseDate);
+        formData.append('artist_id', selectedArtist);
+        formData.append('genre_id', selectedGenre);
+        if (audioFile) formData.append('audio_file', audioFile);
+
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}:`, value);
+        }
+        
+        try {
+            const res = await axios.put(
+                `${process.env.REACT_APP_BASE_URL}api/admin/update-song/${songToEdit.id}/`,
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                },
+            );
+            console.log(res)
+
+            const updated = res.data;
+            setSongs((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+            setModalType(null);
+            setSongToEdit(null);
+        } catch (error) {
+            if (error.response) {
+                console.error('Lỗi từ server:', error.response.data);
+            } else {
+                console.error('Lỗi kết nối:', error.message);
+            }
+        }
     };
 
     return (
@@ -179,21 +203,22 @@ const Songs = () => {
                     <div className={cx('action-container')}>
                         <div className={cx('actions-wrap')}>
                             <div className={cx('action-list')}>
-                                <button className={cx('btn', 'btn--primary', 'mr-10')} onClick={() => {}}>
-                                    Lọc
-                                </button>
                                 <button
-                                    className={cx('btn', 'btn--delete')}
-                                    disabled={checkedItems.length < 2}
-                                    onClick={handleCheckDelete}
+                                    className={cx('btn', 'btn--primary', 'mr-10')}
+                                    onClick={() => {
+                                        setModalType('add');
+                                        setTitle('');
+                                        setDuration('');
+                                        setReleaseDate('');
+                                        setSelectedArtist('');
+                                        setSelectedGenre('');
+                                        setAudioFile(null);
+                                        setSongToEdit(null);
+                                    }}
                                 >
-                                    Xóa
+                                    Add song
                                 </button>
                             </div>
-                            <Link to={'/trash-users'} className={cx('trash-product')}>
-                                <TrashIcon fill={'#6c757d'} />
-                                <p className={cx('count-trash-product')}>{countDelete || 0}</p>
-                            </Link>
                         </div>
                     </div>
                 </div>
@@ -203,70 +228,74 @@ const Songs = () => {
                         <table className={cx('table')}>
                             <thead>
                                 <tr>
-                                    <th scope="col">Họ và tên</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Artist</th>
                                     <th scope="col" style={{ textAlign: 'center' }}>
-                                        Liên lạc
+                                        Genre
                                     </th>
                                     <th scope="col" style={{ textAlign: 'center' }}>
-                                        Email
+                                        Release date
                                     </th>
                                     <th scope="col" style={{ textAlign: 'center' }}>
-                                        Quyền
+                                        Play count
+                                    </th>
+                                    <th scope="col" style={{ textAlign: 'center' }}>
+                                        Audition
                                     </th>
                                     <th scope="col" style={{ textAlign: 'center' }} colSpan="2">
-                                        Chỉnh sửa
+                                        Action
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {users.length > 0 ? (
-                                    users.map((result) => (
-                                        <tr key={result.userId}>
-                                            <td>
-                                                <p>{result.fullName}</p>
-                                            </td>
-
+                                {songs.length > 0 ? (
+                                    songs.map((song) => (
+                                        <tr key={song.id}>
+                                            <td>{song.title}</td>
+                                            <td>{song.artist_info.name}</td>
+                                            <td style={{ textAlign: 'center' }}>{song.genre_info.name}</td>
+                                            <td style={{ textAlign: 'center' }}>{song.release_date}</td>
+                                            <td style={{ textAlign: 'center' }}>{song.play_count}</td>
                                             <td style={{ textAlign: 'center' }}>
-                                                <p>{result.phone}</p>
-                                            </td>
-
-                                            <td style={{ textAlign: 'center' }}>{result.email}</td>
-                                            <td
-                                                style={{ textAlign: 'center' }}
-                                                className={cx('product-total')}
-                                                data-total={result._id}
-                                            >
-                                                {result.role}
+                                                <audio
+                                                    controls
+                                                    src={song.audio_url}
+                                                    style={{ width: '150px', height: '44px' }}
+                                                />
                                             </td>
                                             <td style={{ textAlign: 'center' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    {result.role !== 'admin' && (
-                                                        <>
-                                                            <span
-                                                                className={cx('btn-delete')}
-                                                                data-id={result.userId}
-                                                                onClick={handleCheckDelete}
-                                                            >
-                                                                Xóa
-                                                            </span>
-                                                            <div
-                                                                className={cx('btn-edit')}
-                                                                data-id={result.userId}
-                                                                onClick={handleCheckedBtnEdit}
-                                                            >
-                                                                Sửa
-                                                            </div>
-                                                        </>
-                                                    )}
+                                                    <span
+                                                        className={cx('btn-delete')}
+                                                        data-id={song.id}
+                                                        onClick={handleCheckDelete}
+                                                    >
+                                                        <TrashIcon fill={'#eb5959'} />
+                                                    </span>
+                                                    <div
+                                                        className={cx('btn-edit')}
+                                                        data-id={song.id}
+                                                        onClick={() => {
+                                                            setModalType('edit');
+                                                            setSongToEdit(song);
+                                                            setTitle(song.title);
+                                                            setDuration(song.duration);
+                                                            setReleaseDate(song.release_date);
+                                                            setSelectedArtist(song.artist_info.id);
+                                                            setSelectedGenre(song.genre_info.id);
+                                                            setAudioFile(null);
+                                                        }}
+                                                    >
+                                                        <UpdateIcon fill={'#1b8fd7'} />
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className={cx('text-center')}>
-                                            Chưa có người dùng.
-                                            <Link to={'/products'}> Quay lại</Link>
+                                        <td colSpan="8" className={cx('text-center')}>
+                                            Chưa có bài hát nào.
                                         </td>
                                     </tr>
                                 )}
@@ -285,13 +314,13 @@ const Songs = () => {
                             pageCount={pageCount}
                             marginPagesDisplayed={3}
                             pageRangeDisplayed={3}
-                            containerClassName={'paginationn'}
-                            pageClassName={'page-itemm'}
-                            pageLinkClassName={'page-linkk'}
-                            previousClassName={'page-itemm'}
-                            previousLinkClassName={'page-linkk'}
-                            nextClassName={'page-itemm'}
-                            nextLinkClassName={'page-linkk'}
+                            containerClassName={'pagination_custom'}
+                            pageClassName={'page-item_custom'}
+                            pageLinkClassName={'page-link_custom'}
+                            previousClassName={'page-item_custom'}
+                            previousLinkClassName={'page-link_custom'}
+                            nextClassName={'page-item_custom'}
+                            nextLinkClassName={'page-link_custom'}
                         />
                     </div>
                 )}
@@ -317,19 +346,15 @@ const Songs = () => {
 
                                 <div className={cx('auth-form__control')}>
                                     <Link
-                                        to={'/users'}
-                                        onClick={handleCheckDelete}
-                                        className={cx('btn auth-form__control-back', 'btn--normal')}
+                                        to={'/songs'}
+                                        onClick={() => setCheckedDelete(false)}
+                                        className={cx('btn', 'auth-form__control-back', 'btn--normal')}
                                     >
                                         Trở lại
                                     </Link>
                                     <button
                                         onClick={() => {
-                                            if (productIdDelete) {
-                                                handleDeleteUsers();
-                                            } else {
-                                                handleDeleteMultipleUser();
-                                            }
+                                            if (songIdToDelete) handleDeleteSong();
                                         }}
                                         value="login"
                                         className={cx('btn', 'btn--primary', 'view-cart')}
@@ -343,150 +368,111 @@ const Songs = () => {
                 </div>
             )}
 
-            {checkedBtnEdit && (
+            {modalType && (
                 <div className={cx('modal')}>
-                    <div className={cx('modal__overlay')}></div>
+                    <div className={cx('modal__overlay')} />
                     <div className={cx('modal__body')}>
                         <div className={cx('auth-form')}>
-                            <div className={cx('auth-form__container', 'js-modal-container-login')}>
-                                <div className={cx('auth-form__header')}></div>
+                            <div className={cx('auth-form__container')}>
+                                <h3 className={cx('auth-form__header')}>
+                                    {modalType === 'add' ? 'Thêm bài hát' : 'Cập nhật bài hát'}
+                                </h3>
+                                <div className={cx('form-group')}>
+                                    <label htmlFor="title">Tên bài hát</label>
+                                    <input
+                                        type="text"
+                                        className={cx('form-control-input')}
+                                        name="title"
+                                        id="title"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                    />
+                                </div>
 
-                                <form>
-                                    <div className={cx('form-group')}>
-                                        <label htmlFor="fullname">Họ và tên</label>
-                                        <input
-                                            type="text"
-                                            className={cx('form-control-input')}
-                                            name="fullname"
-                                            id="fullname"
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
-                                        />
-                                    </div>
+                                <div className={cx('form-group', 'mb-8')}>
+                                    <label htmlFor="releaseDate">Ngày phát hành</label>
+                                    <input
+                                        type="date"
+                                        className={cx('form-control-input')}
+                                        id="releaseDate"
+                                        value={releaseDate}
+                                        onChange={(e) => setReleaseDate(e.target.value)}
+                                    />
+                                </div>
 
-                                    <div className={cx('form-group', 'mb-8')}>
-                                        <label htmlFor="price">Email</label>
-                                        <input
-                                            type="text"
-                                            className={cx('form-control-input')}
-                                            id="price"
-                                            name="price"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                        />
-                                    </div>
+                                <div className={cx('form-group', 'mb-8')}>
+                                    <label htmlFor="artist">Nghệ sĩ</label>
+                                    <select
+                                        id="artist"
+                                        className={cx('form-control-input')}
+                                        value={selectedArtist}
+                                        onChange={(e) => setSelectedArtist(e.target.value)}
+                                    >
+                                        <option value="">-- Chọn nghệ sĩ --</option>
+                                        {artists.map((artist) => (
+                                            <option key={artist.id} value={artist.id}>
+                                                {artist.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                    <div className={cx('cate-detail', 'mb-8')}>
-                                        <div className={cx('form-group', 'mb-8')}>
-                                            <label htmlFor="username">Tên đăng nhập</label>
-                                            <input
-                                                type="text"
-                                                className={cx('form-control-input')}
-                                                name="username"
-                                                id="username"
-                                                value={username}
-                                                onChange={(e) => setUsername(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                <div className={cx('form-group', 'mb-8')}>
+                                    <label htmlFor="genre">Thể loại</label>
+                                    <select
+                                        id="genre"
+                                        className={cx('form-control-input')}
+                                        value={selectedGenre}
+                                        onChange={(e) => setSelectedGenre(e.target.value)}
+                                    >
+                                        <option value="">-- Chọn thể loại --</option>
+                                        {genres.map((genre) => (
+                                            <option key={genre.id} value={genre.id}>
+                                                {genre.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                    <div className={cx('cate-detail', 'mb-8')}>
-                                        <div className={cx('form-group')}>
-                                            <label htmlFor="phone">Liên lạc</label>
-                                            <input
-                                                type="text"
-                                                className={cx('form-control-input')}
-                                                id="phone"
-                                                name="phone"
-                                                value={phone}
-                                                onChange={(e) => setPhone(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className={cx('form-group', 'mb-8')}>
-                                            <label htmlFor="city">Thành phố/ Tỉnh</label>
-                                            <input
-                                                type="text"
-                                                className={cx('form-control-input')}
-                                                id="city"
-                                                name="city"
-                                                value={city}
-                                                onChange={(e) => setCity(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                <div className={cx('form-group', 'mb-8')}>
+                                    <label htmlFor="duration">Thời lượng (giây)</label>
+                                    <input
+                                        type="number"
+                                        className={cx('form-control-input')}
+                                        id="duration"
+                                        value={duration}
+                                        onChange={(e) => setDuration(e.target.value)}
+                                    />
+                                </div>
 
-                                    <div className={cx('cate-detail', 'mb-8')}>
-                                        <div className={cx('form-group', 'mb-8')}>
-                                            <label htmlFor="district">Quận/ Huyện</label>
-                                            <input
-                                                type="text"
-                                                className={cx('form-control-input')}
-                                                id="district"
-                                                name="district"
-                                                value={district}
-                                                onChange={(e) => setDistrict(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className={cx('form-group', 'mb-8')}>
-                                            <label htmlFor="ward">Phường/ Xã</label>
-                                            <input
-                                                type="text"
-                                                className={cx('form-control-input')}
-                                                id="ward"
-                                                name="ward"
-                                                value={ward}
-                                                onChange={(e) => setWard(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className={cx('form-group', 'mb-8')}>
-                                        <label htmlFor="SpecificAddress">Địa chỉ cụ thể</label>
-                                        <input
-                                            style={{ paddingLeft: '10px' }}
-                                            type="text"
-                                            className={cx('form-control-input')}
-                                            placeholder="VD: 20 Đường 50 Khu phố 5"
-                                            id="SpecificAddress"
-                                            name="SpecificAddress"
-                                            value={specificAddress}
-                                            onChange={(e) => setSpecificAddress(e.target.value)}
-                                        />
-                                    </div>
-                                </form>
+                                <div className={cx('form-group', 'mb-8')}>
+                                    <label htmlFor="audioFile">Tệp nhạc</label>
+                                    <input
+                                        type="file"
+                                        className={cx('form-control-input')}
+                                        id="audioFile"
+                                        accept="audio/*"
+                                        onChange={(e) => setAudioFile(e.target.files[0])}
+                                    />
+                                </div>
 
                                 <div className={cx('auth-form__control')}>
-                                    <Link
-                                        to={'/users'}
+                                    <button
+                                        className={cx('btn', 'btn--normal', 'mr-10')}
                                         onClick={() => {
-                                            if (checkedBtnEdit) {
-                                                setCheckedBtnEdit(!checkedBtnEdit);
-                                            } else {
-                                                setCheckedBtnAdd(!checkedBtnAdd);
-                                                setUsername(undefined);
-                                                setFullName(undefined);
-                                                setEmail(undefined);
-                                                setPhone(undefined);
-                                                setRole(undefined);
-                                                setCity(undefined);
-                                                setDistrict(undefined);
-                                                setWard(undefined);
-                                                setSpecificAddress(undefined);
-                                            }
+                                            setModalType(null);
+                                            setSongToEdit(null);
                                         }}
-                                        className={cx('btn', 'auth-form__control-back', 'btn--normal js-modal-close')}
                                     >
                                         Hủy
-                                    </Link>
+                                    </button>
                                     <button
+                                        className={cx('btn', 'btn--primary')}
                                         onClick={() => {
-                                            if (checkedBtnEdit) {
-                                                handleEditUser();
-                                            }
+                                            modalType === 'add' ? handleAddSong() : handleUpdateSong();
                                         }}
-                                        className={cx('btn', 'btn--primary', 'view-cart')}
                                     >
-                                        Tiếp tục
+                                        {modalType === 'add' ? 'Thêm' : 'Cập nhật'}
                                     </button>
                                 </div>
                             </div>
@@ -496,6 +482,6 @@ const Songs = () => {
             )}
         </div>
     );
-}
+};
 
 export default Songs;
