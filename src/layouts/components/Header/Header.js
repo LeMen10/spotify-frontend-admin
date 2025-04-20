@@ -15,18 +15,18 @@ function Header() {
     const navigate = useNavigate();
     const [username, setUsername] = useState();
 
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await request.get(`/Account/get-username`);
-                setUsername(res.username);
-            } catch (error) { 
-                if (error.response && error.response.status === 401) {
-                    navigate('/login'); 
-                }
-            }
-        })();
-    }, [navigate]);
+    // useEffect(() => {
+    //     (async () => {
+    //         try {
+    //             const res = await request.get(`/Account/get-username`);
+    //             setUsername(res.username);
+    //         } catch (error) { 
+    //             if (error.response && error.response.status === 401) {
+    //                 navigate('/login'); 
+    //             }
+    //         }
+    //     })();
+    // }, [navigate]);
 
     const handleLogout = () => {
         Cookies.remove('token_admin');

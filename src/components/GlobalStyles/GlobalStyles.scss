@@ -436,19 +436,19 @@ input:focus {
     color: #fff;
 }
 
-.paginationn {
+.pagination_custom {
     display: flex;
     justify-content: center;
     background-color: #fff;
     padding: 12px 12px 44px 12px;
 }
-.page-itemm {
+.page-item_custom {
     width: 36px;
     text-align: center;
     font-weight: 700;
     margin-left: 6px;
 }
-.page-linkk {
+.page-link_custom {
     transition: all 0.3s linear;
     background-color: #d7d7d7;
     border-radius: 83%;
@@ -457,7 +457,7 @@ input:focus {
     width: 100%;
     padding: 6px;
 }
-.page-itemm:hover .page-linkk {
+.page-item_custom:hover .page-link_custom {
     background-color: var(--primary-color);
     color: #fff;
     cursor: pointer;

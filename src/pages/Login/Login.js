@@ -13,35 +13,34 @@ const cx = className.bind(styles);
 const Login = () => {
     const [username, setUserName] = useState('');
     const [password, setPassword] = useState('');
-    const expires = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
 
     const navigate = useNavigate();
 
-    const handleSubmit = () => {
-        axios
-            .post(`${process.env.REACT_APP_BASE_URL}/Admin/login`, {
-                username,
-                password,
-            })
-            .then((res) => {
-                Cookies.set('token_admin', res.data.accessToken, { expires });
-                navigate(`/`);
-                window.location.reload();
-            })
-            .catch((error) => {
-                if (error.response.status === 404) {
-                    toast.warn('Vui lòng đăng nhập bằng tài khoản của Admin.', {
-                        position: 'top-right',
-                        autoClose: 3000,
-                        hideProgressBar: false,
-                        closeOnClick: true,
-                        pauseOnHover: true,
-                        draggable: true,
-                        progress: undefined,
-                        theme: 'light',
-                    });
-                }
-            });
+    const toastCustom = (message) => {
+        toast.warn(message, {
+            position: 'top-right',
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: 'light',
+        });
+    };
+
+    const handleSubmit = async () => {
+        const data = { username, password };
+        try {
+            const res = await axios.post(`${process.env.REACT_APP_BASE_URL}api/auth/login`, data);
+            Cookies.set('token_admin', res.data.access_token);
+
+            navigate('/');
+            window.location.reload();
+        } catch (error) {
+            const err = error.response.data.error;
+            if (err === 'Invalid username or password') toastCustom('Invalid username or password');
+        }
     };
 
     return (
@@ -66,14 +65,14 @@ const Login = () => {
                     <div className={cx('auth-form')}>
                         <div className={cx('auth-form__container', 'js-modal-container-login')}>
                             <div className={cx('auth-form__header')}>
-                                <h3 className={cx('auth-form__heading')}>Đăng nhập</h3>
+                                <h3 className={cx('auth-form__heading')}>Login</h3>
                             </div>
 
                             <div className={cx('auth-form__form')}>
                                 <div className={cx('auth-form__group')}>
                                     <input
                                         type="text"
-                                        placeholder="Username của bạn"
+                                        placeholder="username"
                                         name="username"
                                         className={cx('auth-form__input')}
                                         id="auth-form__user-login"
@@ -84,7 +83,7 @@ const Login = () => {
                                 <div className={cx('auth-form__group')}>
                                     <input
                                         type="password"
-                                        placeholder="Mật khẩu của bạn"
+                                        placeholder="password"
                                         name="password"
                                         className={cx('auth-form__input')}
                                         id="auth-form__password-login"
@@ -97,11 +96,11 @@ const Login = () => {
                             <div className={cx('auth-form__aside')}>
                                 <p className={cx('auth-form__help')}>
                                     <Link to={''} className={cx('auth-form__help-link', 'auth-form__help-forgot')}>
-                                        Quên mật khẩu
+                                        Forgot password?
                                     </Link>
                                     <span className={cx('auth-form__help-separate')}></span>
                                     <Link to={''} href="" className={cx('auth-form__help-link')}>
-                                        Cần trợ giúp?
+                                        Support?
                                     </Link>
                                 </p>
                             </div>
@@ -111,7 +110,7 @@ const Login = () => {
                                     to={'/'}
                                     className={cx('btn', 'auth-form__control-back', 'btn--normal', 'js-modal-close')}
                                 >
-                                    TRỞ LẠI
+                                    Cancel
                                 </Link>
                                 <button
                                     value="login"
@@ -119,7 +118,7 @@ const Login = () => {
                                     onClick={handleSubmit}
                                     disabled={!username || !password}
                                 >
-                                    ĐĂNG NHẬP
+                                    Submit
                                 </button>
                             </div>
                         </div>
@@ -128,6 +127,6 @@ const Login = () => {
             </div>
         </Fragment>
     );
-}
+};
 
 export default Login;
