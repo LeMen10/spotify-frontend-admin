@@ -24,7 +24,7 @@ const Artists = () => {
 
     const getArtists = async (currentPage) => {
         try {
-            const res = await request.get(`/api/admin/get-artists?page=${currentPage}&limit=${postsPerPage}`);
+            const res = await request.get(`/api/admin/get-artists-by-limit?page=${currentPage}&limit=${postsPerPage}`);
             setArtists(res.data);
             setPageCount(res.page_count);
         } catch (error) {
@@ -35,7 +35,7 @@ const Artists = () => {
     useEffect(() => {
         (async () => {
             try {
-                const res = await request.get('/api/admin/get-artists');
+                const res = await request.get('/api/admin/get-artists-by-limit');
                 setArtists(res.data);
                 setPageCount(res.page_count);
             } catch (error) {

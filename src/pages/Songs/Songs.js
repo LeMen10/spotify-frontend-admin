@@ -116,9 +116,6 @@ const Songs = () => {
             });
 
             if (res.ok) {
-                const rs = await res.json();
-                console.log(rs);
-                setSongs((prevSongs) => [...prevSongs, rs]);
                 setTitle('');
                 setSelectedArtist('');
                 setSelectedGenre('');
@@ -127,6 +124,7 @@ const Songs = () => {
                 setAudioFile(null);
                 setImageFile(null);
                 setModalType(null);
+                getSongs(currentPageSong || 1);
             } else {
                 await res.json();
             }
