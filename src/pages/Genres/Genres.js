@@ -39,27 +39,20 @@ const Genres = () => {
                 setGenres(res.data);
                 setPageCount(res.page_count);
             } catch (error) {
-                console.error('Error fetching genres:', error);
-                if (error.response?.status === 401) {
-                    navigate('/login');
-                }
+                if (error.response?.status === 401) navigate('/login');
             }
         })();
     }, [navigate]);
 
     // Hàm lưu add/update genre
     const handleSaveGenre = async () => {
-        if (!genreFormData.name.trim()) {
-            toast.error('Please enter genres name!!');
-            return;
-        }
+        if (!genreFormData.name.trim()) return toast.error('Please enter genres name!!');
 
         try {
             if (modalType === 'add') {
                 const data = await request.post('/api/admin/add-genre', { name: genreFormData.name });
                 setGenres([...genres, data]);
                 toast.success('Create genres successful.');
-                console.log(currentPageGenres)
                 getGenres(currentPageGenres || 1);
             } else if (modalType === 'update') {
                 const data = await request.put(`/api/admin/update-genre/${genreFormData.id}`, {
@@ -72,11 +65,8 @@ const Genres = () => {
             setGenreFormData({ id: null, name: '' });
         } catch (error) {
             console.error(`Error ${modalType === 'add' ? 'adding' : 'updating'} genre:`, error);
-            if (error.response?.status === 401) {
-                navigate('/login');
-            } else {
-                toast.error(`Could not ${modalType === 'add' ? 'add' : 'update'} genres. Please try again.`);
-            }
+            if (error.response?.status === 401) navigate('/login');
+            else toast.error(`Could not ${modalType === 'add' ? 'add' : 'update'} genres. Please try again.`);
         }
     };
 
@@ -92,11 +82,8 @@ const Genres = () => {
             toast.success('Deleted genres and related songs successfully!');
         } catch (error) {
             console.error('Error deleting genre:', error);
-            if (error.response?.status === 401) {
-                navigate('/login');
-            } else {
-                toast.error('Unable to delete category. Please try again.');
-            }
+            if (error.response?.status === 401) navigate('/login');
+            else toast.error('Unable to delete category. Please try again.');
         }
     };
 
@@ -159,14 +146,14 @@ const Genres = () => {
                         <table className={cx('table')}>
                             <thead>
                                 <tr>
-                                    <th scope="col">Genre</th>
+                                    <th scope="col">genre</th>
                                     <th scope="col" style={{ textAlign: 'center' }} colSpan="2">
-                                        Action
+                                        action
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {genres.length > 0 ? (
+                                {genres.length > 0 && (
                                     genres.map((genre) => (
                                         <tr key={genre.id}>
                                             <td>{genre.name}</td>
@@ -189,12 +176,6 @@ const Genres = () => {
                                             </td>
                                         </tr>
                                     ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="8" className={cx('text-center')}>
-                                            No genres yet.
-                                        </td>
-                                    </tr>
                                 )}
                             </tbody>
                         </table>
@@ -265,10 +246,10 @@ const Genres = () => {
                         <div className={cx('auth-form')}>
                             <div className={cx('auth-form__container')}>
                                 <h3 className={cx('auth-form__header')}>
-                                    {modalType === 'add' ? 'Create genres' : 'Update genres'}
+                                    {modalType === 'add' ? 'CREATE GENRES' : 'UPDATE GENRES'}
                                 </h3>
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="genreName">Name</label>
+                                    <label htmlFor="genreName">name</label>
                                     <input
                                         type="text"
                                         className={cx('form-control-input')}
