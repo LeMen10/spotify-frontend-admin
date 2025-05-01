@@ -16,7 +16,7 @@ const Users = () => {
     const [checkedDelete, setCheckedDelete] = useState(false);
     const [productIdDelete, setProductIdDelete] = useState();
     const [pageCount, setPageCount] = useState(0);
-    const [currentPageProduct, setCurrentPageProduct] = useState(1);
+    const [currentPageUser, setCurrentPageUser] = useState(1);
     const [users, setUsers] = useState([]);
     const [modalType, setModalType] = useState(null); // 'add', 'update', or null
     const [userFormData, setUserFormData] = useState({
@@ -38,10 +38,7 @@ const Users = () => {
             setUsers(res.data);
             setPageCount(res.page_count);
         } catch (error) {
-            console.error('Error fetching users:', error);
-            if (error.response?.status === 401) {
-                navigate('/login');
-            }
+            if (error.response?.status === 401) navigate('/login');
         }
     };
 
@@ -52,23 +49,17 @@ const Users = () => {
                 setUsers(res.data);
                 setPageCount(res.page_count);
             } catch (error) {
-                console.error('Error fetching genres:', error);
-                if (error.response?.status === 401) {
-                    navigate('/login');
-                }
+                if (error.response?.status === 401) navigate('/login');
             }
         })();
     }, [navigate]);
 
-    // Hàm lưu (thêm hoặc cập nhật) người dùng
     const handleSaveUser = async () => {
         if (!userFormData.username.trim() || !userFormData.email.trim() || !userFormData.fullname.trim()) {
-            toast.error('Please fill in all required fields');
-            return;
+            return toast.error('Please fill in all required fields');
         }
         if (modalType === 'add' && !userFormData.password.trim()) {
-            toast.error('Please enter a password for the new user');
-            return;
+            return toast.error('Please enter a password for the new user'); 
         }
 
         try {
@@ -90,6 +81,7 @@ const Users = () => {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
                 setUsers([...users, data]);
+                getUsers(currentPageUser || 1);
                 toast.success('User added successfully');
             } else if (modalType === 'update') {
                 const data = await request.put(`/api/admin/update-user/${userFormData.id}`, formData, {
@@ -110,10 +102,8 @@ const Users = () => {
                 is_staff: false,
             });
         } catch (error) {
-            console.error(`Error ${modalType === 'add' ? 'adding' : 'updating'} user:`, error);
-            if (error.response?.status === 401) {
-                navigate('/login');
-            } else {
+            if (error.response?.status === 401) navigate('/login');
+            else {
                 toast.error(`Failed to ${modalType === 'add' ? 'add' : 'update'} user. Please try again.`);
             }
         }
@@ -126,14 +116,12 @@ const Users = () => {
             setUsers(users.filter((user) => user.id !== parseInt(productIdDelete)));
             setCheckedDelete(false);
             setProductIdDelete(null);
+            getUsers(currentPageUser || 1);
             toast.success('User deleted successfully');
         } catch (error) {
             console.error('Error deleting user:', error);
-            if (error.response?.status === 401) {
-                navigate('/login');
-            } else {
-                toast.error('Failed to delete user. Please try again.');
-            }
+            if (error.response?.status === 401) navigate('/login');
+            else toast.error('Failed to delete user. Please try again.');
         }
     };
 
@@ -159,14 +147,14 @@ const Users = () => {
         setProductIdDelete(targetId);
     };
 
-    // Hàm xử lý phân trang
+    // Hàm xử lý pagination
     const handlePageClick = (event) => {
         const currentPage = event.selected + 1;
         getUsers(currentPage);
-        setCurrentPageProduct(currentPage);
+        setCurrentPageUser(currentPage);
     };
 
-    // Hàm xử lý chọn file ảnh
+    // Hàm xử lý file ảnh
     const handleFileChange = (e) => {
         setUserFormData({ ...userFormData, profile_pic: e.target.files[0] });
     };
@@ -219,18 +207,18 @@ const Users = () => {
                         <table className={cx('table')}>
                             <thead>
                                 <tr>
-                                    <th scope="col">Username</th>
-                                    <th scope="col">Email</th>
-                                    <th scope="col">Fullname</th>
-                                    <th scope="col">Active</th>
-                                    <th scope="col">Staff</th>
+                                    <th scope="col">username</th>
+                                    <th scope="col">email</th>
+                                    <th scope="col">fullname</th>
+                                    <th scope="col">active</th>
+                                    <th scope="col">staff</th>
                                     <th scope="col" style={{ textAlign: 'center' }} colSpan="2">
-                                        Action
+                                        action
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {users.length > 0 ? (
+                                {users.length > 0 && (
                                     users.map((user) => (
                                         <tr key={user.id}>
                                             <td>{user.username}</td>
@@ -257,12 +245,6 @@ const Users = () => {
                                             </td>
                                         </tr>
                                     ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="7" className={cx('text-center')}>
-                                            No users available.
-                                        </td>
-                                    </tr>
                                 )}
                             </tbody>
                         </table>
@@ -333,10 +315,10 @@ const Users = () => {
                         <div className={cx('auth-form')}>
                             <div className={cx('auth-form__container')}>
                                 <h3 className={cx('auth-form__header')}>
-                                    {modalType === 'add' ? 'Add New User' : 'Update User'}
+                                    {modalType === 'add' ? 'ADD USER' : 'UPDATE USER'}
                                 </h3>
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="username">Username</label>
+                                    <label htmlFor="username">username</label>
                                     <input
                                         type="text"
                                         className={cx('form-control-input')}
@@ -346,7 +328,7 @@ const Users = () => {
                                     />
                                 </div>
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="email">Email</label>
+                                    <label htmlFor="email">email</label>
                                     <input
                                         type="email"
                                         className={cx('form-control-input')}
@@ -357,7 +339,7 @@ const Users = () => {
                                 </div>
                                 <div className={cx('form-group')}>
                                     <label htmlFor="password">
-                                        Password {modalType === 'update' && '(leave blank if unchanged)'}
+                                        password {modalType === 'update' && '(leave blank if unchanged)'}
                                     </label>
                                     <input
                                         type="password"
@@ -368,7 +350,7 @@ const Users = () => {
                                     />
                                 </div>
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="fullname">Full Name</label>
+                                    <label htmlFor="fullname">fullname</label>
                                     <input
                                         type="text"
                                         className={cx('form-control-input')}
@@ -378,7 +360,7 @@ const Users = () => {
                                     />
                                 </div>
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="profile_pic">Profile Picture</label>
+                                    <label htmlFor="profile_pic">profile picture</label>
                                     <input
                                         type="file"
                                         className={cx('form-control-input')}

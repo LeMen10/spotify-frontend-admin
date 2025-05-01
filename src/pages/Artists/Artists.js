@@ -39,19 +39,13 @@ const Artists = () => {
                 setArtists(res.data);
                 setPageCount(res.page_count);
             } catch (error) {
-                console.error('Error fetching artists:', error);
-                if (error.response?.status === 401) {
-                    navigate('/login');
-                }
+                if (error.response?.status === 401) navigate('/login');
             }
         })();
     }, [navigate]);
 
     const handleSaveArtist = async () => {
-        if (!artistFormData.name.trim()) {
-            toast.error('Please enter artist name');
-            return;
-        }
+        if (!artistFormData.name.trim()) return toast.error('Please enter artist name');
 
         try {
             if (modalType === 'add') {
@@ -69,12 +63,8 @@ const Artists = () => {
             setModalType(null);
             setArtistFormData({ id: null, name: '' });
         } catch (error) {
-            console.error(`Error ${modalType === 'add' ? 'adding' : 'updating'} artist:`, error);
-            if (error.response?.status === 401) {
-                navigate('/login');
-            } else {
-                toast.error(`Could not ${modalType === 'add' ? 'add' : 'update'} artist. Please try again.`);
-            }
+            if (error.response?.status === 401) navigate('/login');
+            else toast.error(`Could not ${modalType === 'add' ? 'add' : 'update'} artist. Please try again.`);
         }
     };
 
@@ -88,7 +78,6 @@ const Artists = () => {
             toast.success('Delete artist successfully');
             getArtists(currentPageArtists || 1);
         } catch (error) {
-            console.error('Error deleting artist:', error);
             if (error.response?.status === 401) return navigate('/login');
             toast.error('Artist could not be removed. Please try again.');
         }
@@ -153,14 +142,14 @@ const Artists = () => {
                         <table className={cx('table')}>
                             <thead>
                                 <tr>
-                                    <th scope="col">Artist</th>
+                                    <th scope="col">artist</th>
                                     <th scope="col" style={{ textAlign: 'center' }} colSpan="2">
-                                        Action
+                                        action
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {artists.length > 0 ? (
+                                {artists.length > 0 && (
                                     artists.map((artist) => (
                                         <tr key={artist.id}>
                                             <td>{artist.name}</td>
@@ -183,12 +172,6 @@ const Artists = () => {
                                             </td>
                                         </tr>
                                     ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="8" className={cx('text-center')}>
-                                            No artists yet.
-                                        </td>
-                                    </tr>
                                 )}
                             </tbody>
                         </table>
@@ -261,7 +244,7 @@ const Artists = () => {
                                     {modalType === 'add' ? 'Create artist' : 'Update artist'}
                                 </h3>
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="artistName">Name</label>
+                                    <label htmlFor="artistName">name</label>
                                     <input
                                         type="text"
                                         className={cx('form-control-input')}

@@ -118,7 +118,7 @@ const Login = () => {
                                     onClick={handleSubmit}
                                     disabled={!username || !password}
                                 >
-                                    Submit
+                                    OK
                                 </button>
                             </div>
                         </div>
