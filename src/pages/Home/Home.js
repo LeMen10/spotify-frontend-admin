@@ -1,13 +1,11 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { Link } from 'react-router-dom';
 import className from 'classnames/bind';
 import styles from './Home.module.scss';
-import { Line } from 'react-chartjs-2';
-// import { Chart } from 'chart.js/auto';
+import { Bar } from 'react-chartjs-2';
 import * as request from '~/utils/request';
-import { CartAdminIcon, OrderProcessingIcon, RoudedIcon, TickIcon } from '~/components/Icons';
+import { UserIcon, HeadsetIcon, SongIcon, MessageIcon } from '~/components/Icons';
 import {
     Chart,
     LineController,
@@ -17,115 +15,94 @@ import {
     CategoryScale,
     Tooltip,
     Legend,
+    BarElement,
+    BarController,
 } from 'chart.js';
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
 
+Chart.register(
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    Tooltip,
+    Legend,
+    BarElement,
+    BarController,
+);
 
 const cx = className.bind(styles);
 
 const Home = () => {
     const navigate = useNavigate();
-    const [allOrder, setAllOrder] = useState(0);
-    const [processingOrder, setProcessingOrder] = useState(0);
-    const [deliveringOrder, setDeliveringOrder] = useState(0);
-    const [completeOrder, setCompleteOrder] = useState(0);
-    const [orderDetailCountsPerMonth, setOrderDetailCountsPerMonth] = useState([]);
-    const months = [
-        'Tháng 1',
-        'Tháng 2',
-        'Tháng 3',
-        'Tháng 4',
-        'Tháng 5',
-        'Tháng 6',
-        'Tháng 7',
-        'Tháng 8',
-        'Tháng 9',
-        'Tháng 10',
-        'Tháng 11',
-        'Tháng 12',
-    ];
-    const data = {
-        labels: months,
-        datasets: [
-            {
-                label: 'Số đơn',
-                data: orderDetailCountsPerMonth.length > 0 ? orderDetailCountsPerMonth : Array(12).fill(0),
-                fill: false,
-                borderColor: '#5ece98',
-                tension: 0.1,
-            },
-        ],
-    };
-
-    const options = {
-        responsive: true,
-        scales: {
-            y: {
-                beginAtZero: true,
-            },
-        },
-        plugins: {
-            legend: {
-                display: true,
-                position: 'top',
-            },
-        },
-    };
+    const [users, setUsers] = useState(0);
+    const [songs, setSongs] = useState(0);
+    const [genres, setGenres] = useState(0);
+    const [messages, setMessages] = useState(0);
+    const [topSongsChart, setTopSongsChart] = useState(null);
+    const [topSongs, setTopSongs] = useState([]);
 
     useEffect(() => {
-        const fetchApi = async () => {
+        (async () => {
             try {
-                const res = await request.get(`/Admin/get-number-order`);
-                setAllOrder(res.all);
-                setProcessingOrder(res.processing);
-                setDeliveringOrder(res.delivering);
-                setCompleteOrder(res.complete);
-            } catch (error) { 
-                // if (error.response.status === 401) navigate('/login'); 
+                const res = await request.get(`/api/admin/system-stats/`);
+                setUsers(res.data.total_users);
+                setSongs(res.data.total_songs);
+                setGenres(res.data.total_genres);
+                setMessages(res.data.total_messages);
+            } catch (error) {
+                if (error.response.status === 401) navigate('/login');
             }
-        };
-
-        fetchApi();
+        })();
     }, [navigate]);
 
     useEffect(() => {
-        const fetchApi = async () => {
+        (async () => {
             try {
-                const res = await request.get(`/Admin/order-statistics`);
-                setOrderDetailCountsPerMonth(res.orderDetailCountsPerMonth);
-            } catch (error) { 
-                // if (error.response.status === 401) navigate('/login'); 
+                const res = await request.get(`/api/admin/songs/top-popular/`);
+                setTopSongsChart(res.data);
+            } catch (error) {
+                if (error.response.status === 401) navigate('/login');
             }
-        };
+        })();
+    }, [navigate]);
 
-        fetchApi();
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await request.get(`/api/admin/songs/top/`);
+                setTopSongs(res);
+            } catch (error) {
+                if (error.response.status === 401) navigate('/login');
+            }
+        })();
     }, [navigate]);
 
     return (
         <div className={cx('container_m')}>
-            <div className={cx('mt-4', 'mb-4', 'pd-top-40px')}>
+            <div className={cx('mt-4', 'mb-4', 'pd-top-20px')}>
                 <div className={cx('content-page')}>
                     <div className={cx('row')}>
                         <div className={cx('col', 'col-3', 'col-4', 'col-6', 'col-12', 'mb-24')}>
                             <div className={cx('total-order-wrap')}>
                                 <div className={cx('icon-cart')}>
-                                    <CartAdminIcon width="20" />
+                                    <UserIcon width="20" />
                                 </div>
                                 <div className={cx('order-admin')}>
-                                    <h6 className={cx('total-order-title')}>Tổng đơn hàng</h6>
-                                    <p className={cx('total')}>{allOrder || 0}</p>
+                                    <h6 className={cx('total-order-title')}>Total users</h6>
+                                    <p className={cx('total')}>{users || 0}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className={cx('col', 'col-3', 'col-4', 'col-6', 'col-12', 'mb-24')}>
                             <div className={cx('total-order-wrap')}>
-                                <div className={cx('icon-rouded')}>
-                                    <RoudedIcon width="20" />
+                                <div className={cx('icon-rounded')}>
+                                    <SongIcon width="20" />
                                 </div>
                                 <div className={cx('order-admin')}>
-                                    <h6 className={cx('total-order-title')}>Đang xử lý</h6>
-                                    <p className={cx('total')}>{processingOrder || 0}</p>
+                                    <h6 className={cx('total-order-title')}>Total songs</h6>
+                                    <p className={cx('total')}>{songs || 0}</p>
                                 </div>
                             </div>
                         </div>
@@ -133,11 +110,11 @@ const Home = () => {
                         <div className={cx('col', 'col-3', 'col-4', 'col-6', 'col-12', 'mb-24')}>
                             <div className={cx('total-order-wrap')}>
                                 <div className={cx('icon-processing')}>
-                                    <OrderProcessingIcon width="20" />
+                                    <HeadsetIcon width="20" />
                                 </div>
                                 <div className={cx('order-admin')}>
-                                    <h6 className={cx('total-order-title')}>Đang giao</h6>
-                                    <p className={cx('total')}>{deliveringOrder || 0}</p>
+                                    <h6 className={cx('total-order-title')}>Total genres</h6>
+                                    <p className={cx('total')}>{genres || 0}</p>
                                 </div>
                             </div>
                         </div>
@@ -145,23 +122,122 @@ const Home = () => {
                         <div className={cx('col', 'col-3', 'col-4', 'col-6', 'col-12', 'mb-24')}>
                             <div className={cx('total-order-wrap')}>
                                 <div className={cx('icon-tick')}>
-                                    <TickIcon width="20" />
+                                    <MessageIcon width="20" />
                                 </div>
                                 <div className={cx('order-admin')}>
-                                    <h6 className={cx('total-order-title')}>Đã hoàn thành</h6>
-                                    <p className={cx('total')}>{completeOrder || 0}</p>
+                                    <h6 className={cx('total-order-title')}>Total messages</h6>
+                                    <p className={cx('total')}>{messages || 0}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className={cx('order-statistics')}>
-                    <p className={cx('order-statistics-title')}>Thống kê đơn hàng</p>
-                    <Line data={data} options={options} />
+                {topSongsChart && (
+                    <div className={cx('order-statistics', 'mb-24')}>
+                        <p className={cx('order-statistics-title')}>Top 5 popular songs</p>
+                        <Bar
+                            data={{
+                                labels: topSongsChart.labels,
+                                datasets: topSongsChart.datasets,
+                            }}
+                            options={{
+                                responsive: true,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'top',
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                const artist = topSongsChart.datasets[0].artists[context.dataIndex];
+                                                return `${context.dataset.label}: ${context.raw} (by ${artist})`;
+                                            },
+                                        },
+                                    },
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                    },
+                                },
+                            }}
+                        />
+                    </div>
+                )}
+
+                <div className={cx('table-wrap', 'mb-24')}>
+                    <div className={cx('table-container')}>
+                        <table
+                            className={cx('table')}
+                            style={{
+                                borderCollapse: 'separate',
+                                borderSpacing: 0,
+                                borderRadius: '10px',
+                                overflow: 'hidden',
+                                width: '100%',
+                                border: '1px solid #ccc',
+                            }}
+                        >
+                            <thead>
+                                <tr>
+                                    <th scope="col" style={{ textAlign: 'center', padding: '12px' }}>
+                                        Top
+                                    </th>
+                                    <th scope="col" style={{ padding: '12px' }}>
+                                        Image
+                                    </th>
+                                    <th scope="col" style={{ padding: '12px' }}>
+                                        Name
+                                    </th>
+                                    <th scope="col" style={{ padding: '12px' }}>
+                                        Artist
+                                    </th>
+                                    <th scope="col" style={{ textAlign: 'center', padding: '12px' }}>
+                                        Genre
+                                    </th>
+                                    <th scope="col" style={{ textAlign: 'center', padding: '12px' }}>
+                                        Release date
+                                    </th>
+                                    <th scope="col" style={{ textAlign: 'center', padding: '12px' }}>
+                                        Play count
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {topSongs.length > 0 &&
+                                    topSongs.map((song, index) => (
+                                        <tr key={song.id}>
+                                            <td style={{ textAlign: 'center'}}>
+                                                {index + 1}
+                                            </td>
+                                            <td style={{ padding: '12px' }}>
+                                                {song.image && (
+                                                    <img
+                                                        src={song.image}
+                                                        alt={song.title}
+                                                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                                    />
+                                                )}
+                                            </td>
+                                            <td style={{ padding: '12px' }}>{song.title}</td>
+                                            <td style={{ padding: '12px' }}>{song.artist_info.name}</td>
+                                            <td style={{ textAlign: 'center', padding: '12px' }}>
+                                                {song.genre_info.name}
+                                            </td>
+                                            <td style={{ textAlign: 'center', padding: '12px' }}>
+                                                {song.release_date}
+                                            </td>
+                                            <td style={{ textAlign: 'center', padding: '12px' }}>{song.play_count}</td>
+                                        </tr>
+                                    ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     );
-}
+};
 
 export default Home;
