@@ -5,10 +5,11 @@ import ReactPaginate from 'react-paginate';
 import { useNavigate } from 'react-router-dom';
 import className from 'classnames/bind';
 import styles from './Songs.module.scss';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import * as request from '~/utils/request';
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
 const cx = className.bind(styles);
 
@@ -25,6 +26,7 @@ const Songs = () => {
     const [duration, setDuration] = useState('');
     const [releaseDate, setReleaseDate] = useState('');
     const [audioFile, setAudioFile] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
 
     const [artists, setArtists] = useState([]);
     const [genres, setGenres] = useState([]);
@@ -38,7 +40,7 @@ const Songs = () => {
     const getSongs = async (currentPage) => {
         try {
             const res = await request.get(`/api/admin/get-songs?page=${currentPage}&limit=${postsPerPage}`);
-            
+
             setSongs(res.data);
             setPageCount(res.page_count);
         } catch (error) {
@@ -53,11 +55,10 @@ const Songs = () => {
                     request.get('/api/admin/get-artists'),
                     request.get('/api/admin/get-genres'),
                 ]);
-                setArtists(artistRes);
-                setGenres(genreRes);
-            } catch (err) {
-                console.error(err);
-                navigate('/login');
+                setArtists(artistRes.data);
+                setGenres(genreRes.data);
+            } catch (error) {
+                if (error.response.status === 401) navigate('/login');
             }
         })();
     }, [navigate]);
@@ -68,11 +69,8 @@ const Songs = () => {
                 const res = await request.get(`/api/admin/get-songs`);
                 setSongs(res.data);
                 setPageCount(res.page_count);
-                console.log(res);
             } catch (error) {
-                if (error.response && error.response.status === 401) {
-                    navigate('/login');
-                }
+                if (error.response.status === 401) navigate('/login');
             }
         })();
     }, [navigate]);
@@ -89,20 +87,16 @@ const Songs = () => {
             setCheckedDelete(!checkedDelete);
             getSongs(currentPageSong || 1);
         } catch (error) {
-            if (error.response?.status === 401) {
-                navigate('/login');
-            } else {
-                console.error('Lỗi khi xóa bài hát:', error);
-            }
+            if (error.response.status === 401) navigate('/login');
         }
     };
 
     const handleAddSong = async () => {
-        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate || !audioFile) {
-            alert('Vui lòng điền đầy đủ thông tin!');
-            return;
+        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate || !audioFile || !imageFile) {
+            return toast.error('Please fill in all information!');
         }
 
+        const token = Cookies.get('token_admin');
         const formData = new FormData();
         formData.append('title', title);
         formData.append('duration', duration);
@@ -110,15 +104,20 @@ const Songs = () => {
         formData.append('artist_id', selectedArtist);
         formData.append('genre_id', selectedGenre);
         formData.append('audio_file', audioFile);
+        formData.append('image_file', imageFile);
 
         try {
             const res = await fetch(`${process.env.REACT_APP_BASE_URL}api/admin/add-song`, {
                 method: 'POST',
                 body: formData,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
             });
 
             if (res.ok) {
                 const rs = await res.json();
+                console.log(rs);
                 setSongs((prevSongs) => [...prevSongs, rs]);
                 setTitle('');
                 setSelectedArtist('');
@@ -126,12 +125,13 @@ const Songs = () => {
                 setDuration('');
                 setReleaseDate('');
                 setAudioFile(null);
-                // setCheckedBtnAddSong(false);
+                setImageFile(null);
+                setModalType(null);
             } else {
                 await res.json();
             }
         } catch (error) {
-            console.error('Lỗi kết nối:', error);
+            if (error.response.status === 401) navigate('/login');
         }
     };
 
@@ -142,10 +142,8 @@ const Songs = () => {
     };
 
     const handleUpdateSong = async () => {
-        console.log(title, selectedArtist, selectedGenre, duration, releaseDate, audioFile);
-        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate) {
-            return;
-        }
+        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate) return;
+        const token = Cookies.get('token_admin');
         const formData = new FormData();
         formData.append('title', title);
         formData.append('duration', duration);
@@ -153,11 +151,9 @@ const Songs = () => {
         formData.append('artist_id', selectedArtist);
         formData.append('genre_id', selectedGenre);
         if (audioFile) formData.append('audio_file', audioFile);
+        if (imageFile) formData.append('image', imageFile);
+        console.log(imageFile);
 
-        for (let [key, value] of formData.entries()) {
-            console.log(`${key}:`, value);
-        }
-        
         try {
             const res = await axios.put(
                 `${process.env.REACT_APP_BASE_URL}api/admin/update-song/${songToEdit.id}/`,
@@ -165,21 +161,17 @@ const Songs = () => {
                 {
                     headers: {
                         'Content-Type': 'multipart/form-data',
+                        Authorization: `Bearer ${token}`,
                     },
                 },
             );
-            console.log(res)
 
             const updated = res.data;
             setSongs((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
             setModalType(null);
             setSongToEdit(null);
         } catch (error) {
-            if (error.response) {
-                console.error('Lỗi từ server:', error.response.data);
-            } else {
-                console.error('Lỗi kết nối:', error.message);
-            }
+            if (error.response.status === 401) navigate('/login');
         }
     };
 
@@ -228,6 +220,7 @@ const Songs = () => {
                         <table className={cx('table')}>
                             <thead>
                                 <tr>
+                                    <th scope="col">Image</th>
                                     <th scope="col">Name</th>
                                     <th scope="col">Artist</th>
                                     <th scope="col" style={{ textAlign: 'center' }}>
@@ -248,9 +241,18 @@ const Songs = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {songs.length > 0 ? (
+                                {songs.length > 0 &&
                                     songs.map((song) => (
                                         <tr key={song.id}>
+                                            <td>
+                                                {song.image && (
+                                                    <img
+                                                        src={song.image}
+                                                        alt={song.title}
+                                                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                                    />
+                                                )}
+                                            </td>
                                             <td>{song.title}</td>
                                             <td>{song.artist_info.name}</td>
                                             <td style={{ textAlign: 'center' }}>{song.genre_info.name}</td>
@@ -284,6 +286,7 @@ const Songs = () => {
                                                             setSelectedArtist(song.artist_info.id);
                                                             setSelectedGenre(song.genre_info.id);
                                                             setAudioFile(null);
+                                                            setImageFile(null);
                                                         }}
                                                     >
                                                         <UpdateIcon fill={'#1b8fd7'} />
@@ -291,14 +294,7 @@ const Songs = () => {
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="8" className={cx('text-center')}>
-                                            Chưa có bài hát nào.
-                                        </td>
-                                    </tr>
-                                )}
+                                    ))}
                             </tbody>
                         </table>
                     </div>
@@ -337,10 +333,10 @@ const Songs = () => {
                                 </div>
 
                                 <div>
-                                    <h3>Bạn chắc chắn chưa!</h3>
+                                    <h3>Are you sure!</h3>
                                     <p>
-                                        Bạn có thực sự muốn xóa vĩnh viễn sản phẩm này? Bạn không thể khôi phục sản phẩm
-                                        này nữa nếu bạn xóa vĩnh viễn!
+                                        Do you really want to permanently delete this product? You cannot restore this
+                                        product if you delete it permanently!
                                     </p>
                                 </div>
 
@@ -350,7 +346,7 @@ const Songs = () => {
                                         onClick={() => setCheckedDelete(false)}
                                         className={cx('btn', 'auth-form__control-back', 'btn--normal')}
                                     >
-                                        Trở lại
+                                        Cancel
                                     </Link>
                                     <button
                                         onClick={() => {
@@ -359,7 +355,7 @@ const Songs = () => {
                                         value="login"
                                         className={cx('btn', 'btn--primary', 'view-cart')}
                                     >
-                                        Tiếp tục
+                                        OK
                                     </button>
                                 </div>
                             </div>
@@ -375,10 +371,29 @@ const Songs = () => {
                         <div className={cx('auth-form')}>
                             <div className={cx('auth-form__container')}>
                                 <h3 className={cx('auth-form__header')}>
-                                    {modalType === 'add' ? 'Thêm bài hát' : 'Cập nhật bài hát'}
+                                    {modalType === 'add' ? 'ADD SONG' : 'UPDATE SONG'}
                                 </h3>
+                                <div className={cx('form-group', 'mb-8')}>
+                                    <label htmlFor="imageFile">image</label>
+                                    <input
+                                        type="file"
+                                        className={cx('form-control-input')}
+                                        id="imageFile"
+                                        accept="image/*"
+                                        onChange={(e) => setImageFile(e.target.files[0])}
+                                    />
+                                    {songToEdit?.image_url && !imageFile && (
+                                        <div style={{ marginTop: '10px' }}>
+                                            <img
+                                                src={songToEdit.image_url}
+                                                alt="Current song"
+                                                style={{ maxWidth: '100px', maxHeight: '100px' }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="title">Tên bài hát</label>
+                                    <label htmlFor="title">title</label>
                                     <input
                                         type="text"
                                         className={cx('form-control-input')}
@@ -390,7 +405,7 @@ const Songs = () => {
                                 </div>
 
                                 <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="releaseDate">Ngày phát hành</label>
+                                    <label htmlFor="releaseDate">release date</label>
                                     <input
                                         type="date"
                                         className={cx('form-control-input')}
@@ -401,14 +416,14 @@ const Songs = () => {
                                 </div>
 
                                 <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="artist">Nghệ sĩ</label>
+                                    <label htmlFor="artist">artist</label>
                                     <select
                                         id="artist"
                                         className={cx('form-control-input')}
                                         value={selectedArtist}
                                         onChange={(e) => setSelectedArtist(e.target.value)}
                                     >
-                                        <option value="">-- Chọn nghệ sĩ --</option>
+                                        <option value="">-- Choose the artist --</option>
                                         {artists.map((artist) => (
                                             <option key={artist.id} value={artist.id}>
                                                 {artist.name}
@@ -418,14 +433,14 @@ const Songs = () => {
                                 </div>
 
                                 <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="genre">Thể loại</label>
+                                    <label htmlFor="genre">genre</label>
                                     <select
                                         id="genre"
                                         className={cx('form-control-input')}
                                         value={selectedGenre}
                                         onChange={(e) => setSelectedGenre(e.target.value)}
                                     >
-                                        <option value="">-- Chọn thể loại --</option>
+                                        <option value="">-- Choose the genre --</option>
                                         {genres.map((genre) => (
                                             <option key={genre.id} value={genre.id}>
                                                 {genre.name}
@@ -435,7 +450,7 @@ const Songs = () => {
                                 </div>
 
                                 <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="duration">Thời lượng (giây)</label>
+                                    <label htmlFor="duration">duration (s)</label>
                                     <input
                                         type="number"
                                         className={cx('form-control-input')}
@@ -446,7 +461,7 @@ const Songs = () => {
                                 </div>
 
                                 <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="audioFile">Tệp nhạc</label>
+                                    <label htmlFor="audioFile">audio file</label>
                                     <input
                                         type="file"
                                         className={cx('form-control-input')}
@@ -464,7 +479,7 @@ const Songs = () => {
                                             setSongToEdit(null);
                                         }}
                                     >
-                                        Hủy
+                                        Cancel
                                     </button>
                                     <button
                                         className={cx('btn', 'btn--primary')}
@@ -472,7 +487,7 @@ const Songs = () => {
                                             modalType === 'add' ? handleAddSong() : handleUpdateSong();
                                         }}
                                     >
-                                        {modalType === 'add' ? 'Thêm' : 'Cập nhật'}
+                                        {modalType === 'add' ? 'OK' : 'Update'}
                                     </button>
                                 </div>
                             </div>
