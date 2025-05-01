@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { TrashIcon, UpdateIcon } from '~/components/Icons';
 import ReactPaginate from 'react-paginate';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +7,7 @@ import styles from './Users.module.scss';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import * as request from '~/utils/request';
+import Cookies from 'js-cookie';
 
 const cx = className.bind(styles);
 
@@ -19,18 +19,29 @@ const Users = () => {
     const [currentPageUser, setCurrentPageUser] = useState(1);
     const [users, setUsers] = useState([]);
     const [modalType, setModalType] = useState(null); // 'add', 'update', or null
+    const [gender, setGender] = useState('');
     const [userFormData, setUserFormData] = useState({
         id: null,
         username: '',
         email: '',
         password: '',
         fullname: '',
-        profile_pic: null,
-        is_active: true,
-        is_staff: false,
+        profile_pic: '',
     });
 
     const postsPerPage = 8;
+
+    useEffect(() => {
+        const pic =
+            gender === 'male'
+                ? `https://avatar.iran.liara.run/public/boy?username=${userFormData.username}`
+                : `https://avatar.iran.liara.run/public/girl?username=${userFormData.username}`;
+
+        setUserFormData((prev) => ({
+            ...prev,
+            profile_pic: pic,
+        }));
+    }, [userFormData.username, gender]);
 
     const getUsers = async (page) => {
         try {
@@ -55,11 +66,17 @@ const Users = () => {
     }, [navigate]);
 
     const handleSaveUser = async () => {
-        if (!userFormData.username.trim() || !userFormData.email.trim() || !userFormData.fullname.trim()) {
+        const token = Cookies.get('token_admin');
+        if (
+            !userFormData.username.trim() ||
+            !userFormData.email.trim() ||
+            !userFormData.fullname.trim() ||
+            !userFormData.profile_pic
+        ) {
             return toast.error('Please fill in all required fields');
         }
         if (modalType === 'add' && !userFormData.password.trim()) {
-            return toast.error('Please enter a password for the new user'); 
+            return toast.error('Please enter a password for the new user');
         }
 
         try {
@@ -67,14 +84,8 @@ const Users = () => {
             formData.append('username', userFormData.username);
             formData.append('email', userFormData.email);
             formData.append('fullname', userFormData.fullname);
-            formData.append('is_active', userFormData.is_active);
-            formData.append('is_staff', userFormData.is_staff);
-            if (userFormData.password) {
-                formData.append('password', userFormData.password);
-            }
-            if (userFormData.profile_pic) {
-                formData.append('profile_pic', userFormData.profile_pic);
-            }
+            if (userFormData.password) formData.append('password', userFormData.password);
+            if (userFormData.profile_pic) formData.append('profile_pic', userFormData.profile_pic);
 
             if (modalType === 'add') {
                 const data = await request.post('/api/admin/add-user', formData, {
@@ -85,7 +96,9 @@ const Users = () => {
                 toast.success('User added successfully');
             } else if (modalType === 'update') {
                 const data = await request.put(`/api/admin/update-user/${userFormData.id}`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
                 });
                 setUsers(users.map((user) => (user.id === data.id ? data : user)));
                 toast.success('User updated successfully');
@@ -97,9 +110,7 @@ const Users = () => {
                 email: '',
                 password: '',
                 fullname: '',
-                profile_pic: null,
-                is_active: true,
-                is_staff: false,
+                profile_pic: null
             });
         } catch (error) {
             if (error.response?.status === 401) navigate('/login');
@@ -133,9 +144,7 @@ const Users = () => {
             email: user.email,
             password: '',
             fullname: user.fullname,
-            profile_pic: null,
-            is_active: user.is_active,
-            is_staff: user.is_staff,
+            profile_pic: null
         });
         setModalType('update');
     };
@@ -154,9 +163,8 @@ const Users = () => {
         setCurrentPageUser(currentPage);
     };
 
-    // Hàm xử lý file ảnh
-    const handleFileChange = (e) => {
-        setUserFormData({ ...userFormData, profile_pic: e.target.files[0] });
+    const handleGenderChange = (event) => {
+        setGender(event.target.value);
     };
 
     return (
@@ -189,8 +197,6 @@ const Users = () => {
                                             password: '',
                                             fullname: '',
                                             profile_pic: null,
-                                            is_active: true,
-                                            is_staff: false,
                                         });
                                         setModalType('add');
                                     }}
@@ -211,41 +217,58 @@ const Users = () => {
                                     <th scope="col">email</th>
                                     <th scope="col">fullname</th>
                                     <th scope="col">active</th>
-                                    <th scope="col">staff</th>
+                                    <th scope="col">role</th>
                                     <th scope="col" style={{ textAlign: 'center' }} colSpan="2">
                                         action
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {users.length > 0 && (
+                                {users.length > 0 &&
                                     users.map((user) => (
                                         <tr key={user.id}>
                                             <td>{user.username}</td>
                                             <td>{user.email}</td>
                                             <td>{user.fullname}</td>
                                             <td>{user.is_active ? 'Yes' : 'No'}</td>
-                                            <td>{user.is_staff ? 'Yes' : 'No'}</td>
+                                            <td>{user.role}</td>
                                             <td style={{ textAlign: 'center' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                                                     <span
                                                         className={cx('btn-delete')}
                                                         data-id={user.id}
-                                                        onClick={(e) => handleCheckDelete(e)}
+                                                        onClick={
+                                                            user.role === 'admin'
+                                                                ? undefined
+                                                                : (e) => handleCheckDelete(e)
+                                                        }
+                                                        style={{
+                                                            pointerEvents: user.role === 'admin' ? 'none' : 'auto',
+                                                            opacity: user.role === 'admin' ? 0.5 : 1,
+                                                            cursor: user.role === 'admin' ? 'not-allowed' : 'pointer',
+                                                        }}
                                                     >
                                                         <TrashIcon fill={'#eb5959'} />
                                                     </span>
                                                     <div
                                                         className={cx('btn-edit')}
-                                                        onClick={() => handleEditUser(user)}
+                                                        onClick={
+                                                            user.role === 'admin'
+                                                                ? undefined
+                                                                : () => handleEditUser(user)
+                                                        }
+                                                        style={{
+                                                            pointerEvents: user.role === 'admin' ? 'none' : 'auto',
+                                                            opacity: user.role === 'admin' ? 0.5 : 1,
+                                                            cursor: user.role === 'admin' ? 'not-allowed' : 'pointer',
+                                                        }}
                                                     >
                                                         <UpdateIcon fill={'#1b8fd7'} />
                                                     </div>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ))}
                             </tbody>
                         </table>
                     </div>
@@ -359,39 +382,32 @@ const Users = () => {
                                         onChange={(e) => setUserFormData({ ...userFormData, fullname: e.target.value })}
                                     />
                                 </div>
+
                                 <div className={cx('form-group')}>
-                                    <label htmlFor="profile_pic">profile picture</label>
-                                    <input
-                                        type="file"
-                                        className={cx('form-control-input')}
-                                        id="profile_pic"
-                                        onChange={handleFileChange}
-                                    />
+                                    <div className={cx('auth-form__sex-choice', 'with-46')}>
+                                        <label>
+                                            <input
+                                                type="radio"
+                                                name="gender"
+                                                value="male"
+                                                checked={gender === 'male'}
+                                                onChange={handleGenderChange}
+                                            />
+                                            Male
+                                        </label>
+                                        <label>
+                                            <input
+                                                type="radio"
+                                                name="gender"
+                                                value="female"
+                                                checked={gender === 'female'}
+                                                onChange={handleGenderChange}
+                                            />
+                                            Female
+                                        </label>
+                                    </div>
                                 </div>
-                                <div className={cx('form-group')}>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={userFormData.is_active}
-                                            onChange={(e) =>
-                                                setUserFormData({ ...userFormData, is_active: e.target.checked })
-                                            }
-                                        />
-                                        Active
-                                    </label>
-                                </div>
-                                <div className={cx('form-group')}>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={userFormData.is_staff}
-                                            onChange={(e) =>
-                                                setUserFormData({ ...userFormData, is_staff: e.target.checked })
-                                            }
-                                        />
-                                        Staff
-                                    </label>
-                                </div>
+
                                 <div className={cx('auth-form__control')}>
                                     <button
                                         className={cx('btn', 'btn--normal', 'mr-10')}
