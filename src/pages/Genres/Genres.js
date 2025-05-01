@@ -24,7 +24,7 @@ const Genres = () => {
 
     const getGenres = async (currentPage) => {
         try {
-            const res = await request.get(`/api/admin/get-genres?page=${currentPage}&limit=${postsPerPage}`);
+            const res = await request.get(`/api/admin/get-genres-by-limit?page=${currentPage}&limit=${postsPerPage}`);
             setGenres(res.data);
             setPageCount(res.page_count);
         } catch (error) {
@@ -35,7 +35,7 @@ const Genres = () => {
     useEffect(() => {
         (async () => {
             try {
-                const res = await request.get('/api/admin/get-genres');
+                const res = await request.get('/api/admin/get-genres-by-limit');
                 setGenres(res.data);
                 setPageCount(res.page_count);
             } catch (error) {
