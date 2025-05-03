@@ -70,26 +70,28 @@ const Login = () => {
 
                             <div className={cx('auth-form__form')}>
                                 <div className={cx('auth-form__group')}>
-                                    <input
-                                        type="text"
-                                        placeholder="username"
-                                        name="username"
-                                        className={cx('auth-form__input')}
-                                        id="auth-form__user-login"
-                                        value={username}
-                                        onChange={(e) => setUserName(e.target.value)}
-                                    />
-                                </div>
-                                <div className={cx('auth-form__group')}>
-                                    <input
-                                        type="password"
-                                        placeholder="password"
-                                        name="password"
-                                        className={cx('auth-form__input')}
-                                        id="auth-form__password-login"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
+                                    <div className={cx('width-46')}>
+                                        <input
+                                            type="text"
+                                            placeholder="username"
+                                            name="username"
+                                            className={cx('auth-form__input')}
+                                            id="auth-form__user-login"
+                                            value={username}
+                                            onChange={(e) => setUserName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className={cx('width-46')}>
+                                        <input
+                                            type="password"
+                                            placeholder="password"
+                                            name="password"
+                                            className={cx('auth-form__input')}
+                                            id="auth-form__password-login"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

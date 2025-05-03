@@ -7,31 +7,24 @@ import { Link } from 'react-router-dom';
 import images from '~/assets/images/images';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as request from '~/utils/request';
 
 const cx = className.bind(styles);
 
-function Header() {
+const Header = () => {
     const navigate = useNavigate();
-    const [username, setUsername] = useState();
-
-    // useEffect(() => {
-    //     (async () => {
-    //         try {
-    //             const res = await request.get(`/Account/get-username`);
-    //             setUsername(res.username);
-    //         } catch (error) { 
-    //             if (error.response && error.response.status === 401) {
-    //                 navigate('/login'); 
-    //             }
-    //         }
-    //     })();
-    // }, [navigate]);
+    const [username, setUsername] = useState('');
+    const token = Cookies.get('token_admin');
+    
+    useEffect(() => {
+        (async () => {
+            if (token) setUsername('admin');
+        })();
+    }, [navigate, token]);
 
     const handleLogout = () => {
         Cookies.remove('token_admin');
         setUsername(undefined);
-        navigate('/login')
+        navigate('/login');
         window.location.reload();
     };
 
@@ -42,7 +35,7 @@ function Header() {
                     <div className={cx('header-action')}>
                         <div className={cx('img-flag')}>
                             <img src={images.vietnam} alt="" />
-                            <p>VietNam</p>
+                            <p>Việt Nam</p>
                         </div>
                         <Link to={''}>
                             <MoonIcon className={cx('icon-heart')} />
@@ -67,7 +60,7 @@ function Header() {
                                     </ul>
                                 </div>
                             </div>
-                        ): (
+                        ) : (
                             <Link to={'/login'}>{<UserIcon className={cx('icon-user')} />}</Link>
                         )}
 
@@ -77,6 +70,6 @@ function Header() {
             </div>
         </div>
     );
-}
+};
 
 export default Header;
