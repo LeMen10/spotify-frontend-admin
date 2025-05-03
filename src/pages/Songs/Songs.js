@@ -34,6 +34,7 @@ const Songs = () => {
 
     const [modalType, setModalType] = useState(null);
     const [songToEdit, setSongToEdit] = useState(null);
+    const [stateMusic, setStateMusic] = useState(false);
 
     const postsPerPage = 10;
 
@@ -67,6 +68,7 @@ const Songs = () => {
         (async () => {
             try {
                 const res = await request.get(`/api/admin/get-songs`);
+                console.log(res);
                 setSongs(res.data);
                 setPageCount(res.page_count);
             } catch (error) {
@@ -92,7 +94,7 @@ const Songs = () => {
     };
 
     const handleAddSong = async () => {
-        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate || !audioFile || !imageFile) {
+        if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate || !audioFile) {
             return toast.error('Please fill in all information!');
         }
 
@@ -105,6 +107,7 @@ const Songs = () => {
         formData.append('genre_id', selectedGenre);
         formData.append('audio_file', audioFile);
         formData.append('image_file', imageFile);
+        formData.append('is_premium', stateMusic ? 'true' : 'false');
 
         try {
             const res = await fetch(`${process.env.REACT_APP_BASE_URL}api/admin/add-song`, {
@@ -124,7 +127,9 @@ const Songs = () => {
                 setAudioFile(null);
                 setImageFile(null);
                 setModalType(null);
+                setStateMusic(false);
                 getSongs(currentPageSong || 1);
+                toast.success('Add song successfully!');
             } else {
                 await res.json();
             }
@@ -140,6 +145,7 @@ const Songs = () => {
     };
 
     const handleUpdateSong = async () => {
+        console.log(title, duration, releaseDate, selectedArtist, selectedGenre, stateMusic, audioFile, imageFile);
         if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate) return;
         const token = Cookies.get('token_admin');
         const formData = new FormData();
@@ -148,9 +154,9 @@ const Songs = () => {
         formData.append('release_date', releaseDate);
         formData.append('artist_id', selectedArtist);
         formData.append('genre_id', selectedGenre);
+        formData.append('is_premium', stateMusic ? 'true' : 'false');
         if (audioFile) formData.append('audio_file', audioFile);
-        if (imageFile) formData.append('image', imageFile);
-        console.log(imageFile);
+        if (imageFile) formData.append('image_file', imageFile);
 
         try {
             const res = await axios.put(
@@ -168,6 +174,7 @@ const Songs = () => {
             setSongs((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
             setModalType(null);
             setSongToEdit(null);
+            toast.success('Update song successfully!');
         } catch (error) {
             if (error.response.status === 401) navigate('/login');
         }
@@ -204,6 +211,7 @@ const Songs = () => {
                                         setSelectedGenre('');
                                         setAudioFile(null);
                                         setSongToEdit(null);
+                                        setStateMusic(false);
                                     }}
                                 >
                                     Add song
@@ -231,7 +239,7 @@ const Songs = () => {
                                         Play count
                                     </th>
                                     <th scope="col" style={{ textAlign: 'center' }}>
-                                        Audition
+                                        Premium
                                     </th>
                                     <th scope="col" style={{ textAlign: 'center' }} colSpan="2">
                                         Action
@@ -257,11 +265,14 @@ const Songs = () => {
                                             <td style={{ textAlign: 'center' }}>{song.release_date}</td>
                                             <td style={{ textAlign: 'center' }}>{song.play_count}</td>
                                             <td style={{ textAlign: 'center' }}>
-                                                <audio
-                                                    controls
-                                                    src={song.audio_url}
-                                                    style={{ width: '150px', height: '44px' }}
-                                                />
+                                                <span
+                                                    className={cx('premium-status', {
+                                                        premium: song.is_premium,
+                                                        free: !song.is_premium,
+                                                    })}
+                                                >
+                                                    {song.is_premium ? 'Premium' : 'Free'}
+                                                </span>
                                             </td>
                                             <td style={{ textAlign: 'center' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -285,6 +296,7 @@ const Songs = () => {
                                                             setSelectedGenre(song.genre_info.id);
                                                             setAudioFile(null);
                                                             setImageFile(null);
+                                                            setStateMusic(song.is_premium);
                                                         }}
                                                     >
                                                         <UpdateIcon fill={'#1b8fd7'} />
@@ -372,7 +384,9 @@ const Songs = () => {
                                     {modalType === 'add' ? 'ADD SONG' : 'UPDATE SONG'}
                                 </h3>
                                 <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="imageFile">image</label>
+                                    <label htmlFor="imageFile">
+                                        image {modalType !== 'add' && '(no need if not changed)'}
+                                    </label>
                                     <input
                                         type="file"
                                         className={cx('form-control-input')}
@@ -390,76 +404,117 @@ const Songs = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div className={cx('form-group')}>
-                                    <label htmlFor="title">title</label>
-                                    <input
-                                        type="text"
-                                        className={cx('form-control-input')}
-                                        name="title"
-                                        id="title"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                    />
+                                <div className={cx('auth-form__group', 'mb-8')}>
+                                    <div className={cx('width-46')}>
+                                        <div className={cx('form-group', 'mb-8')}>
+                                            <label htmlFor="title">title</label>
+                                            <input
+                                                type="text"
+                                                className={cx('form-control-input')}
+                                                name="title"
+                                                id="title"
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className={cx('width-46')}>
+                                        <label htmlFor="title">state</label>
+                                        <div className={cx('auth-form__sex-choice')}>
+                                            <label>
+                                                <input
+                                                    type="radio"
+                                                    name="stateMusic"
+                                                    value={true}
+                                                    checked={stateMusic === true}
+                                                    onChange={() => setStateMusic(true)}
+                                                />
+                                                Premium
+                                            </label>
+                                            <label>
+                                                <input
+                                                    type="radio"
+                                                    name="stateMusic"
+                                                    value={false}
+                                                    checked={stateMusic === false}
+                                                    onChange={() => setStateMusic(false)}
+                                                />
+                                                Free
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className={cx('auth-form__group', 'mb-8')}>
+                                    <div className={cx('width-46')}>
+                                        <div className={cx('form-group')}>
+                                            <label htmlFor="releaseDate">release date</label>
+                                            <input
+                                                type="date"
+                                                className={cx('form-control-input')}
+                                                id="releaseDate"
+                                                value={releaseDate}
+                                                onChange={(e) => setReleaseDate(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className={cx('width-46')}>
+                                        <div className={cx('form-group')}>
+                                            <label htmlFor="duration">duration (s)</label>
+                                            <input
+                                                type="number"
+                                                className={cx('form-control-input')}
+                                                id="duration"
+                                                value={duration}
+                                                onChange={(e) => setDuration(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className={cx('auth-form__group', 'mb-8')}>
+                                    <div className={cx('width-46')}>
+                                        <div className={cx('form-group', 'mb-8')}>
+                                            <label htmlFor="artist">artist</label>
+                                            <select
+                                                id="artist"
+                                                className={cx('form-control-input')}
+                                                value={selectedArtist}
+                                                onChange={(e) => setSelectedArtist(e.target.value)}
+                                            >
+                                                <option value="">-- Choose the artist --</option>
+                                                {artists.map((artist) => (
+                                                    <option key={artist.id} value={artist.id}>
+                                                        {artist.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className={cx('width-46')}>
+                                        <div className={cx('form-group', 'mb-8')}>
+                                            <label htmlFor="genre">genre</label>
+                                            <select
+                                                id="genre"
+                                                className={cx('form-control-input')}
+                                                value={selectedGenre}
+                                                onChange={(e) => setSelectedGenre(e.target.value)}
+                                            >
+                                                <option value="">-- Choose the genre --</option>
+                                                {genres.map((genre) => (
+                                                    <option key={genre.id} value={genre.id}>
+                                                        {genre.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="releaseDate">release date</label>
-                                    <input
-                                        type="date"
-                                        className={cx('form-control-input')}
-                                        id="releaseDate"
-                                        value={releaseDate}
-                                        onChange={(e) => setReleaseDate(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="artist">artist</label>
-                                    <select
-                                        id="artist"
-                                        className={cx('form-control-input')}
-                                        value={selectedArtist}
-                                        onChange={(e) => setSelectedArtist(e.target.value)}
-                                    >
-                                        <option value="">-- Choose the artist --</option>
-                                        {artists.map((artist) => (
-                                            <option key={artist.id} value={artist.id}>
-                                                {artist.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="genre">genre</label>
-                                    <select
-                                        id="genre"
-                                        className={cx('form-control-input')}
-                                        value={selectedGenre}
-                                        onChange={(e) => setSelectedGenre(e.target.value)}
-                                    >
-                                        <option value="">-- Choose the genre --</option>
-                                        {genres.map((genre) => (
-                                            <option key={genre.id} value={genre.id}>
-                                                {genre.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="duration">duration (s)</label>
-                                    <input
-                                        type="number"
-                                        className={cx('form-control-input')}
-                                        id="duration"
-                                        value={duration}
-                                        onChange={(e) => setDuration(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className={cx('form-group', 'mb-8')}>
-                                    <label htmlFor="audioFile">audio file</label>
+                                    <label htmlFor="audioFile">
+                                        audio file {modalType !== 'add' && '(no need if not changed)'}
+                                    </label>
                                     <input
                                         type="file"
                                         className={cx('form-control-input')}
