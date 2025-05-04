@@ -68,7 +68,6 @@ const Songs = () => {
         (async () => {
             try {
                 const res = await request.get(`/api/admin/get-songs`);
-                console.log(res);
                 setSongs(res.data);
                 setPageCount(res.page_count);
             } catch (error) {
@@ -145,7 +144,6 @@ const Songs = () => {
     };
 
     const handleUpdateSong = async () => {
-        console.log(title, duration, releaseDate, selectedArtist, selectedGenre, stateMusic, audioFile, imageFile);
         if (!title || !selectedArtist || !selectedGenre || !duration || !releaseDate) return;
         const token = Cookies.get('token_admin');
         const formData = new FormData();
