@@ -32,7 +32,7 @@ const Login = () => {
     const handleSubmit = async () => {
         const data = { username, password };
         try {
-            const res = await axios.post(`${process.env.REACT_APP_BASE_URL}api/auth/login`, data);
+            const res = await axios.post(`${process.env.REACT_APP_BASE_URL}api/admin/auth/login`, data);
             Cookies.set('token_admin', res.data.access_token);
 
             navigate('/');
